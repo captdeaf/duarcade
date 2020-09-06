@@ -1,0 +1,21 @@
+- 'library' stuff
+renderer.lua
+scene.lua
+
+- Scene library
+highscores.lua
+startscreen.lua
+
+- Menu scene, comes first
+menuscene.lua
+
+- Default Scenes
+creditscene.lua
+
+-- And games that aren't dynamically loaded
+asteroids.lua
+hovercrafthurdle.lua
+rhythmic.lua
+
+-- Finally, start everything
+final.lua

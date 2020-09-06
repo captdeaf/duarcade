@@ -1,0 +1,7 @@
+---
+name: Arcade Conf
+slots:
+  alldata:
+    class: DatabankUnit
+  screen:
+    class: ScreenUnit

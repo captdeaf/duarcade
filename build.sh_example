@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Directory to compile into a .conf file
+dirname=arcade
+
+# Use lua compiler to check for lua syntax errors.
+luac5.3 -p $dirname/*.lua && echo "Syntax OK" || exit
+
+# Generate the .conf and _start.lua files
+ruby genconf.rb $dirname
+
+# Copy the .conf file to the custom directory of Dual Universe
+mv $dirname.conf /mnt/c/Program\ Data/Dual\ Universe/Game/lua/autoconf/custom/$dirname.conf
+
+echo "Generated arcade.conf"
