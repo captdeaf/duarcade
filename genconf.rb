@@ -58,8 +58,9 @@ end
 
 startevt = {}
 body = ""
-IO.read("#{dirname}/loadorder").split.each do |fn|
-  if fn =~ /^\w+.lua/ then
+IO.readlines("#{dirname}/loadorder").each do |fn|
+  fn.chomp!
+  if fn =~ /^\w+.lua$/ then
     body += IO.read("#{dirname}/" + fn)
   end
 end
