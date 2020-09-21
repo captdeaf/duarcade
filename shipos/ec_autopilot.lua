@@ -1,3 +1,9 @@
+local AP_DESCENT_THROTTLE = 0.2 --export: Throttle % to use on descent / approach
+local AP_DESCENT_DISTANCE = 2200 --export: How far away from destination to start descending
+local AP_CRUISE_ALTITUDE = 800 --export: How high above target altitude to cruise?
+local AP_CLIMB_PITCH = 15 --export: In degrees, how high to aim the ship during initial, full power climb.
+local AP_CRUISE_PITCH = 6.0 --export: Pitch to cruise at. If you're bouncing up and down, adjust this.
+
 local EC_AUTOPILOT = {
     name = 'Autopilot',
     desc = [[
@@ -11,7 +17,6 @@ Engage autopilot. Destination: %s.
     callbacks = {},
     announcements = {},
     time = 0.0,
-    throttle = 0.4,
     arrived = false,
 }
 
@@ -69,7 +74,8 @@ EC_AUTOPILOT.recalculate = function()
 
     SHIP.retractLandingGears()
 
-    if inatmo and dist < 200000.0 and destination.inatmo then
+    -- I think there's no planets more than 1.5 SU wide, and there's no
+    if inatmo and dist < 400000.0 and destination.inatmo then
 
 	local flatdist = math.sqrt(dist*dist - altDiff*altDiff)
 
@@ -83,7 +89,7 @@ EC_AUTOPILOT.recalculate = function()
 	    table.insert(cbs, {clearEngineCommand})
 	    table.insert(cbs, {clearDestination})
 	    table.insert(cbs, {setEngineCommand, EC_LAND})
-        elseif EC_AUTOPILOT.arrived or flatdist < 15.0 then
+        elseif EC_AUTOPILOT.arrived or flatdist < 30.0 then
 	    EC_AUTOPILOT.arrived = true
 	    table.insert(cbs, {SHIP.stabilize})
 	    table.insert(cbs, {SHIP.throttleTo, 0.0})
@@ -91,33 +97,14 @@ EC_AUTOPILOT.recalculate = function()
 	    table.insert(cbs, {SHIP.brake, 1.0})
 	    table.insert(cbs, {SHIP.hover, 10})
 	    return
-	elseif flatdist < 50.0 then
-	    desiredThrottle = 0.1
+	elseif flatdist < AP_DESCENT_DISTANCE then
+	    desiredThrottle = AP_DESCENT_THROTTLE
 	    desiredSpeed = 20.0
-	    desiredAltitude = destination.altitude + 10
-	elseif flatdist < 400.0 then
-	    desiredThrottle = 0.2
-	    desiredSpeed = 60.0
-	    desiredAltitude = destination.altitude + 20
-	elseif flatdist < 600.0 then
-	    desiredThrottle = 0.2
-	    desiredSpeed = 80.0
-	    desiredAltitude = destination.altitude + 60
-	elseif flatdist < 1000 then
-	    desiredThrottle = 0.3
-	    desiredAltitude = destination.altitude + 100
-	    desiredSpeed = 80.0
-	elseif flatdist < 2000 then
-	    desiredThrottle = 0.6
-	    desiredAltitude = destination.altitude + 200
-	    desiredSpeed = 1000.0
-	elseif flatdist < 5000 then
-	    desiredThrottle = 1.0
-	    desiredAltitude = destination.altitude + 600
-	    desiredSpeed = 1000.0
+	    local fact = flatdist / AP_DESCENT_DISTANCE
+	    desiredAltitude = destination.altitude + AP_CRUISE_ALTITUDE * (fact * fact)
 	else
 	    desiredThrottle = 1.0
-	    desiredAltitude = destination.altitude + 800
+	    desiredAltitude = destination.altitude + AP_CRUISE_ALTITUDE
 	    desiredSpeed = 1000.0
 	end
 
@@ -129,31 +116,37 @@ EC_AUTOPILOT.recalculate = function()
 	if PHYSICS.currentSpeed - desiredSpeed > 60 then
 	    brakeTo = 1.0
 	elseif PHYSICS.currentSpeed - desiredSpeed > 10 then
-	    brakeTo = 0.4
+	    brakeTo = 0.2
 	else
 	    brakeTo = 0.0
 	end
-        
-	if vertdiff > 40 then
-	    pitch = 15.0
-	elseif vertdiff > -40 then
-	    pitch = 5.0
+
+	if vertdiff > 50 then
+	    pitch = AP_CLIMB_PITCH
+	elseif vertdiff > -20 then
+	    pitch = AP_CRUISE_PITCH
+	elseif vertdiff > -60 then
+	    pitch = -5.0
 	else
-	    pitch = -12.0
-	    brakeTo = 0.4
+	    pitch = -15.0
 	end
 
-	EC_AUTOPILOT.throttle = utils.clamp(desiredThrottle, 0.0, 1.0)
+	desiredThrottle = utils.clamp(desiredThrottle, 0.0, 1.0)
+
+	-- At a very high distance (on other side of planet), yaw heading gets confused easily.
+	if dist > 30000 and math.abs(yaw_heading) < 5 then
+	    yaw_heading = 0
+	end
 
         -- Cross-planetary travel
 	table.insert(cbs, {SHIP.turnToHeadingAtmo, pitch, yaw_heading})
 	table.insert(cbs, {SHIP.hover, 30})
-	table.insert(cbs, {SHIP.throttleTo, EC_AUTOPILOT.throttle})
+	table.insert(cbs, {SHIP.throttleTo, desiredThrottle})
 	table.insert(cbs, {SHIP.brake, brakeTo})
     else
         EC_AUTOPILOT.announce("Interplanetary travel TBD")
     end
-    
+
 end
 
 EC_AUTOPILOT.update = function(secs)

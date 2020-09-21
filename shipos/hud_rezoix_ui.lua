@@ -3,10 +3,10 @@
 
 local HUDRezoix = {
     name = "Rezoix's DU HUD",
-    key = 'hudrezoix',
+    key = "hudrezoix",
     opts = {
-        enabled = false,
-    },
+        enabled = false
+    }
 }
 
 function HUDRezoix.render()
@@ -18,8 +18,10 @@ function HUDRezoix.render()
     local constrR = vec3(core.getConstructWorldOrientationRight())
     local constrV = vec3(core.getConstructWorldOrientationUp())
 
-    local pitch = gyro.getPitch()--180 - getRoll(worldV, constrR, constrF)
-    local roll = gyro.getRoll()--getRoll(worldV, constrF, constrR)
+    local pitch = gyro.getPitch()
+     --180 - getRoll(worldV, constrR, constrF)
+    local roll = gyro.getRoll()
+     --getRoll(worldV, constrF, constrR)
     local bottomText = "ROLL"
     local mode = 0
 
@@ -40,7 +42,8 @@ function HUDRezoix.render()
         bottomText = "YAW"
     end
 
-    content = [[
+    content =
+        [[
         <style>
             body {margin: 0}
             svg {display:block; position:absolute; top:0; left:0}
@@ -99,65 +102,91 @@ function HUDRezoix.render()
 
             </g>]]
 
-
     pitchC = math.floor(pitch)
-    for i = pitchC-25,pitchC+25 do
-        if (i%10==0) then
+    for i = pitchC - 25, pitchC + 25 do
+        if (i % 10 == 0) then
             num = i
             if (num > 180) then
-                num = -180 + 10*(i-18)
+                num = -180 + 10 * (i - 18)
             elseif (num < -170) then
-                num = 180 + 10*(i+18)
+                num = 180 + 10 * (i + 18)
             end
 
-            content = content..[[<g transform="translate(0 ]]..(-i*5 + pitch*5)..[[)">
-                <text x="745" y="540" style="fill:rgb(1, 165, 177);text-anchor:end;font-size:12;font-family:Montserrat;font-weight:bold">]]..num..[[</text>
-                <text x="1175" y="540" style="fill:rgb(1, 165, 177);text-anchor:start;font-size:12;font-family:Montserrat;font-weight:bold">]]..num..[[</text></g>]]
+            content =
+                content ..
+                [[<g transform="translate(0 ]] ..
+                    (-i * 5 + pitch * 5) ..
+                        [[)">
+                <text x="745" y="540" style="fill:rgb(1, 165, 177);text-anchor:end;font-size:12;font-family:Montserrat;font-weight:bold">]] ..
+                            num ..
+                                [[</text>
+                <text x="1175" y="540" style="fill:rgb(1, 165, 177);text-anchor:start;font-size:12;font-family:Montserrat;font-weight:bold">]] ..
+                                    num .. [[</text></g>]]
         end
 
         len = 5
-        if (i%10==0) then
+        if (i % 10 == 0) then
             len = 30
-        elseif (i%5==0) then
+        elseif (i % 5 == 0) then
             len = 15
         end
 
-        content = content..[[
-        <g transform="translate(0 ]]..(-i*5 + pitch*5)..[[)">
-            <line x1="]]..(780-len)..[[" y1="540" x2="780" y2="540"style="stroke:rgb(1, 165, 177);opacity:0.3;stroke-width:3"/>
-            <line x1="]]..(1140+len)..[[" y1="540" x2="1140" y2="540"style="stroke:rgb(1, 165, 177);opacity:0.3;stroke-width:3"/></g>]]
-
+        content =
+            content ..
+            [[
+        <g transform="translate(0 ]] ..
+                (-i * 5 + pitch * 5) ..
+                    [[)">
+            <line x1="]] ..
+                        (780 - len) ..
+                            [[" y1="540" x2="780" y2="540"style="stroke:rgb(1, 165, 177);opacity:0.3;stroke-width:3"/>
+            <line x1="]] ..
+                                (1140 + len) ..
+                                    [[" y1="540" x2="1140" y2="540"style="stroke:rgb(1, 165, 177);opacity:0.3;stroke-width:3"/></g>]]
     end
 
     rollC = math.floor(roll)
-    for i = rollC-35,rollC+35 do
-        if (i%10==0) then
+    for i = rollC - 35, rollC + 35 do
+        if (i % 10 == 0) then
             num = math.abs(i)
             if (num > 180) then
-                num = 180 + (180-num)
+                num = 180 + (180 - num)
             end
-            content = content..[[<g transform="rotate(]]..(i - roll)..[[,960,460)">
-            <text x="960" y="760" style="fill:rgb(1, 165, 177);text-anchor:middle;font-size:12;font-family:Montserrat;font-weight:bold">]]..num..[[</text></g>]]
+            content =
+                content ..
+                [[<g transform="rotate(]] ..
+                    (i - roll) ..
+                        [[,960,460)">
+            <text x="960" y="760" style="fill:rgb(1, 165, 177);text-anchor:middle;font-size:12;font-family:Montserrat;font-weight:bold">]] ..
+                            num .. [[</text></g>]]
         end
 
         len = 5
-        if (i%10==0) then
+        if (i % 10 == 0) then
             len = 15
-        elseif (i%5==0) then
+        elseif (i % 5 == 0) then
             len = 10
         end
 
-        content = content..[[<g transform="rotate(]]..(i - roll)..[[,960,460)">
-        <line x1="960" y1="730" x2="960" y2="]]..(730+len)..[[" style="stroke:rgb(1, 165, 177);opacity:0.3;stroke-width:2"/></g>]]
+        content =
+            content ..
+            [[<g transform="rotate(]] ..
+                (i - roll) ..
+                    [[,960,460)">
+        <line x1="960" y1="730" x2="960" y2="]] ..
+                        (730 + len) .. [[" style="stroke:rgb(1, 165, 177);opacity:0.3;stroke-width:2"/></g>]]
     end
 
     -- -unit.getThrottle()*0.97
-    content = content..[[<g transform="translate(0 ]]..(-50)..[[)">
+    content =
+        content ..
+        [[<g transform="translate(0 ]] ..
+            (-50) ..
+                [[)">
             <polygon points="788,650 800,647 800,653" style="fill:rgb(1, 165, 177);opacity:0.7"/>
         </g>]]
 
-
-    content = content..[[
+    content = content .. [[
 
         </svg>
     ]]

@@ -1,12 +1,12 @@
 local EC_HOVER = {
-    name = 'Hover',
+    name = "Hover",
     desc = [[
 1) Engage all brakes
 2) Set hover to 30 meters
 3) Rotate to be as flat as possible
 ]],
     override = false,
-    runtime = 0.0,
+    runtime = 0.0
 }
 
 EC_HOVER.start = function()
@@ -28,7 +28,7 @@ EC_HOVER.flush = function(secs)
     SHIP.brake()
     SHIP.hover(30)
     if EC_HOVER.runtime > 3.0 and math.abs(PHYSICS.constructVelocitySpeed) < 0.2 then
-	clearEngineCommand()
+        clearEngineCommand()
     end
 end
 

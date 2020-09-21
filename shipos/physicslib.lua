@@ -2,7 +2,7 @@
 -- Axis
 local PHYSICS = {
     PRESSED = {},
-    nullvec = vec3(0.0, 0.0, 0.0),
+    nullvec = vec3(0.0, 0.0, 0.0)
 }
 
 function PHYSICS.keyState(key)
@@ -16,10 +16,10 @@ end
 function PHYSICS.update()
     -- Information about the ship
     local unit_data = json.decode(unit.getData())
-    PHYSICS.maxBrakeForce = unit_data['maxBrake'] or 100000000
-    PHYSICS.currentSpeed = unit_data['speed']
-    PHYSICS.currentBrake = unit_data['currentBrake']
-    PHYSICS.currentAccel = unit_data['acceleration']
+    PHYSICS.maxBrakeForce = unit_data["maxBrake"] or 100000000
+    PHYSICS.currentSpeed = unit_data["speed"]
+    PHYSICS.currentBrake = unit_data["currentBrake"]
+    PHYSICS.currentAccel = unit_data["acceleration"]
 
     -- Gravity and which way is 'up'
     PHYSICS.worldGravity = vec3(core.getWorldGravity())
@@ -39,7 +39,7 @@ function PHYSICS.update()
     PHYSICS.constructVelocity = vec3(core.getWorldVelocity())
     PHYSICS.constructVelocityDir = vec3(core.getWorldVelocity()):normalize()
     PHYSICS.constructVelocitySpeed = vec3(core.getWorldVelocity()):len()
-    
+
     -- Angular velocity
     PHYSICS.constructAngularVelocity = vec3(core.getWorldAngularVelocity())
     PHYSICS.airAngularFriction = vec3(core.getWorldAirFrictionAngularAcceleration())
@@ -69,7 +69,6 @@ function PHYSICS.getRotationDiff(targetRotation, currentRotation)
         targetDiff = -(360 + targetDiff)
     end
     return targetDiff
-
 end
 function PHYSICS.getRotationCorrection(targetRotation, currentRotation)
     local targetDiff = PHYSICS.getRotationDiff(targetRotation, currentRotation)
@@ -92,13 +91,11 @@ function PHYSICS.setRotationVelocity(angularVelocity, torqueFactor)
     local angularAcceleration = torqueFactor * (angularVelocity - PHYSICS.constructAngularVelocity)
     angularAcceleration = angularAcceleration - PHYSICS.airAngularFriction -- Try to compensate air friction
 
-    unit.setEngineCommand('torque', {vec3(0.0, 0.0, 0.0):unpack()}, {angularAcceleration:unpack()}, 1, 0, '', '', '', 0)
+    unit.setEngineCommand("torque", {vec3(0.0, 0.0, 0.0):unpack()}, {angularAcceleration:unpack()}, 1, 0, "", "", "", 0)
 end
 
 function PHYSICS.setShipRotation(pitch, roll, yaw)
-    local target = -pitch * PHYSICS.constructRight +
-                   roll * PHYSICS.constructForward +
-		   yaw * PHYSICS.constructUp
+    local target = -pitch * PHYSICS.constructRight + roll * PHYSICS.constructForward + yaw * PHYSICS.constructUp
 
     PHYSICS.setRotationVelocity(target, 2.0)
 end

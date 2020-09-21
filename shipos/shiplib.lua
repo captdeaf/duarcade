@@ -9,7 +9,7 @@ SHIP.plan = {
     yaw = 0.0,
     brake = 0.0,
     booster = false,
-    hoverAt = 4.0,
+    hoverAt = 4.0
 }
 
 SHIP.LONGITUDINAL = 0
@@ -22,17 +22,17 @@ SHIP.setVectorThrust = function(throttle, tags, kinematicdirection, thrustdirect
     local thrust = PHYSICS.nullvec
     if math.abs(throttle) > 0.01 then
         local maxThrust = core.getMaxKinematicsParametersAlongAxis(tags, {kinematicdirection:unpack()})
-	local speedF, speedB, spaceF, spaceB = table.unpack(maxThrust)
-	if not PHYSICS.isInAtmosphere() then
-	    speedF, speedB = spaceF, spaceB
-	end
-	local speed = speedF
-	if throttle < 0 then
-	    speed = speedB
-	end
-	thrust = thrustdirection * speed * math.abs(throttle)
+        local speedF, speedB, spaceF, spaceB = table.unpack(maxThrust)
+        if not PHYSICS.isInAtmosphere() then
+            speedF, speedB = spaceF, spaceB
+        end
+        local speed = speedF
+        if throttle < 0 then
+            speed = speedB
+        end
+        thrust = thrustdirection * speed * math.abs(throttle)
     end
-    unit.setEngineCommand(tags, {thrust:unpack()}, {PHYSICS.nullvec:unpack()}, true, false, '', '', '', 0)
+    unit.setEngineCommand(tags, {thrust:unpack()}, {PHYSICS.nullvec:unpack()}, true, false, "", "", "", 0)
 end
 
 SHIP.update = function()
@@ -42,27 +42,42 @@ SHIP.update = function()
 end
 
 SHIP.flush = function()
-    SHIP.setVectorThrust(SHIP.plan.throttle, 'thrust analog longitudinal', PHYSICS.constructLocalForward, PHYSICS.constructForward)
-    SHIP.setVectorThrust(SHIP.plan.throttleLateral, 'thrust analog lateral', PHYSICS.constructLocalRight, PHYSICS.constructRight)
-    SHIP.setVectorThrust(SHIP.plan.throttleVertical, 'thrust analog vertical', PHYSICS.constructLocalUp, PHYSICS.constructUp)
+    SHIP.setVectorThrust(
+        SHIP.plan.throttle,
+        "thrust analog longitudinal",
+        PHYSICS.constructLocalForward,
+        PHYSICS.constructForward
+    )
+    SHIP.setVectorThrust(
+        SHIP.plan.throttleLateral,
+        "thrust analog lateral",
+        PHYSICS.constructLocalRight,
+        PHYSICS.constructRight
+    )
+    SHIP.setVectorThrust(
+        SHIP.plan.throttleVertical,
+        "thrust analog vertical",
+        PHYSICS.constructLocalUp,
+        PHYSICS.constructUp
+    )
 
-    local desiredAngularVelocity = SHIP.plan.pitch * PHYSICS.constructRight +
-                                   SHIP.plan.roll * PHYSICS.constructForward +
-				   SHIP.plan.yaw * PHYSICS.constructUp
+    local desiredAngularVelocity =
+        SHIP.plan.pitch * PHYSICS.constructRight + SHIP.plan.roll * PHYSICS.constructForward +
+        SHIP.plan.yaw * PHYSICS.constructUp
 
     PHYSICS.setRotationVelocity(desiredAngularVelocity, SHIP.TORQUE)
 
-    unit.setEngineThrust('brake', SHIP.plan.brake * PHYSICS.maxBrakeForce)
+    unit.setEngineThrust("brake", SHIP.plan.brake * PHYSICS.maxBrakeForce)
     if SHIP.plan.booster then
         -- Any non-zero value, really.
-	unit.setEngineThrust('booster', 100.0)
+        unit.setEngineThrust("booster", 100.0)
     else
-	unit.setEngineThrust('booster', 0.0)
+        unit.setEngineThrust("booster", 0.0)
     end
     if SHIP.plan.hoverAt > 0.0 then
-	unit.activateGroundEngineAltitudeStabilization(SHIP.plan.hoverAt)
+        unit.activateGroundEngineAltitudeStabilization(SHIP.plan.hoverAt)
     else
-	unit.deactivateGroundEngineAltitudeStabilization()
+        unit.deactivateGroundEngineAltitudeStabilization()
     end
 end
 
@@ -80,13 +95,13 @@ SHIP.reset = function()
     SHIP.plan = {
         throttle = 0.0,
         throttleLateral = 0.0,
-	throttleVertical = 0.0,
-	pitch = 0.0,
-	roll = 0.0,
-	yaw = 0.0,
-	brake = 0.0,
-	booster = false,
-	hoverAt = 4.0,
+        throttleVertical = 0.0,
+        pitch = 0.0,
+        roll = 0.0,
+        yaw = 0.0,
+        brake = 0.0,
+        booster = false,
+        hoverAt = 4.0
     }
 end
 
@@ -99,9 +114,15 @@ SHIP.spin = function(pitch, roll, yaw)
 end
 
 SHIP.rotateTo = function(pitch, roll, yaw)
-    if pitch == nil then pitch = PHYSICS.currentPitchDeg end
-    if roll == nil then roll = PHYSICS.currentRollDeg end
-    if yaw == nil then yaw = PHYSICS.currentYawDeg end
+    if pitch == nil then
+        pitch = PHYSICS.currentPitchDeg
+    end
+    if roll == nil then
+        roll = PHYSICS.currentRollDeg
+    end
+    if yaw == nil then
+        yaw = PHYSICS.currentYawDeg
+    end
     pitch = PHYSICS.getRotationCorrection(pitch, PHYSICS.currentPitchDeg)
     roll = PHYSICS.getRotationCorrection(roll, PHYSICS.currentRollDeg)
     yaw = PHYSICS.getRotationCorrection(yaw, PHYSICS.currentYawDeg)
@@ -125,21 +146,21 @@ SHIP.turnToHeadingAtmo = function(pitch, heading)
     local roll = 0
     if math.abs(heading) > 90 then
         targetYaw = 0.5
-	roll = 20
+        roll = 20
     elseif math.abs(heading) > 15 then
         targetYaw = 0.2
-	roll = 10
-    elseif math.abs(heading) > 2 then
+        roll = 10
+    elseif math.abs(heading) > 5 then
         targetYaw = math.abs(heading) / 100
-	roll = 5
-      elseif math.abs(heading) > 0.01 then
+        roll = 5
+    elseif math.abs(heading) > 0.01 then
         targetYaw = math.abs(heading) / 100
-	roll = 0
+        roll = 0
     end
     if heading > 0 then
         targetYaw = -targetYaw
     else
-	roll = -roll
+        roll = -roll
     end
     local pvel = PHYSICS.getRotationCorrection(pitch, PHYSICS.currentPitchDeg)
     local rvel = PHYSICS.getRotationCorrection(roll, PHYSICS.currentRollDeg)
@@ -148,7 +169,7 @@ SHIP.turnToHeadingAtmo = function(pitch, heading)
 end
 
 SHIP.stabilize = function()
-	SHIP.rotateTo(0.0, 0.0, nil)
+    SHIP.rotateTo(0.0, 0.0, nil)
 end
 
 SHIP.brake = function(amt)
