@@ -55,6 +55,10 @@ function HUDAutopilot.render()
 	if sbody.name ~= dbody.name then
 	    HUDAutopilot.addData(data, "Target Body", dbody.name)
 	end
+	local phead = PHYSICS.getRotationDiff(getRoll(dpos - PHYSICS.position, PHYSICS.constructRight, PHYSICS.constructUp), 180)
+	local yhead = getRoll(dpos - PHYSICS.position, PHYSICS.constructUp, PHYSICS.constructRight)
+	HUDAutopilot.addData(data, "Phead", string.format("%d", math.floor(phead)))
+	HUDAutopilot.addData(data, "Yhead", string.format("%d", math.floor(yhead)))
     end
     if not PHYSICS.inAtmo then
 	HUDAutopilot.addData(data, "Brake Dist", Render.distance(PHYSICS.brakeDistance))

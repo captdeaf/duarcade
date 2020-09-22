@@ -214,13 +214,15 @@ EC_AUTOPILOT.recalculate = function()
 
         local vfl = vfix:len()
 
-	if vfix:len() > 1.0 then
-	    -- Massive course correction required
-	    desiredBrake = 1.0
-	elseif vfix:len() > 0.25 then
-	    vgo = vfix
-	elseif vfix:len() > 0.05 then
-	    vgo = (vdirection * 2.0 + vfix):normalize()
+        if PHYSICS.constructVelocitySpeed > 100 then
+	  if vfix:len() > 1.0 then
+	      -- Massive course correction required
+	      desiredBrake = 1.0
+	  elseif vfix:len() > 0.25 then
+	      vgo = vfix
+	  elseif vfix:len() > 0.05 then
+	      vgo = (vdirection * 2.0 + vfix):normalize()
+	  end
 	end
 
 	table.insert(cbs, {SHIP.turnToSpaceVector, vgo})

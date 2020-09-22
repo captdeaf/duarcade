@@ -12,6 +12,8 @@ SHIP.plan = {
     hoverAt = 4.0
 }
 
+SHIP.pids = {}
+
 SHIP.LONGITUDINAL = 0
 SHIP.LATERAL = 1
 SHIP.VERTICAL = 2
@@ -101,11 +103,20 @@ SHIP.reset = function()
         yaw = 0.0,
         brake = 0.0,
         booster = false,
-        hoverAt = 4.0
+        hoverAt = 20.0
     }
+    SHIP.pids = {}
 end
 
-SHIP.killEngines = SHIP.reset
+SHIP.killEngines = function()
+    SHIP.plan.throttle = 0.0
+    SHIP.plan.throttleLateral = 0.0
+    SHIP.plan.throttleVertical = 0.0
+    SHIP.plan.pitch = 0.0
+    SHIP.plan.roll = 0.0
+    SHIP.plan.yaw = 0.0
+    SHIP.plan.booster = false
+end
 
 SHIP.spin = function(pitch, roll, yaw)
     SHIP.plan.pitch = pitch
@@ -113,20 +124,17 @@ SHIP.spin = function(pitch, roll, yaw)
     SHIP.plan.yaw = yaw
 end
 
-SHIP.rotateTo = function(pitch, roll, yaw)
+SHIP.rotateTo = function(pitch, roll)
+    -- rotateTo is atmo-only. Yaw has no meaning in atmo.
     if pitch == nil then
         pitch = PHYSICS.currentPitchDeg
     end
     if roll == nil then
         roll = PHYSICS.currentRollDeg
     end
-    if yaw == nil then
-        yaw = PHYSICS.currentYawDeg
-    end
-    pitch = PHYSICS.getRotationCorrection(pitch, PHYSICS.currentPitchDeg)
-    roll = PHYSICS.getRotationCorrection(roll, PHYSICS.currentRollDeg)
-    yaw = PHYSICS.getRotationCorrection(yaw, PHYSICS.currentYawDeg)
-    SHIP.spin(pitch, roll, yaw)
+    pitch = SHIP.pidRotate('pitch', pitch, PHYSICS.currentPitchDeg)
+    roll = SHIP.pidRotate('roll', roll, PHYSICS.currentRollDeg)
+    SHIP.spin(pitch, roll, 0.0)
 end
 
 SHIP.throttleTo = function(amt)
@@ -141,23 +149,27 @@ SHIP.retractLandingGears = function()
     unit.retractLandingGears()
 end
 
-SHIP.getCorrectionThrust = function(heading)
-    local rval = utils.sign(heading)
-    if math.abs(heading) > 90 then
-	return rval * 0.3
-    elseif math.abs(heading) > 15 then
-	return rval * 0.05
-    elseif math.abs(heading) > 5 then
-	return rval * 0.01
+SHIP.pid = function(name, val)
+    if not SHIP.pids[name] then
+        SHIP.pids[name] = pid.new(0.01, 0, 0.2)
     end
-    return 0
+    SHIP.pids[name]:inject(val)
+    local ret = SHIP.pids[name]:get()
+    return ret
+end
+
+SHIP.pidRotate = function(name, val, target)
+    local diff = PHYSICS.getRotationDiff(val, target)
+    return SHIP.pid(name, diff)
 end
 
 SHIP.turnToSpaceVector = function(vec)
-    local phead = getRoll(vec, PHYSICS.constructForward, PHYSICS.constructUp)
-    local yhead = -getRoll(vec, PHYSICS.constructUp, PHYSICS.constructRight)
-    local pvec = SHIP.getCorrectionThrust(phead)
-    local yvec = SHIP.getCorrectionThrust(yhead)
+    local phead = PHYSICS.getRotationDiff(getRoll(vec, PHYSICS.constructRight, PHYSICS.constructUp), 180)
+    local yhead = getRoll(vec, PHYSICS.constructUp, PHYSICS.constructRight)
+    -- phead and yhead are the difference between vec and current construct facing
+    -- So we need to invert them for the pid()
+    local pvec = SHIP.pid('spacepitch', -phead)
+    local yvec = SHIP.pid('spaceyaw', -yhead)
     -- Roll doesn't matter
     SHIP.spin(pvec, 0.0, yvec)
 end
@@ -186,8 +198,8 @@ SHIP.turnToHeadingAtmo = function(pitch, heading)
     else
 	roll = -roll
     end
-    local pvel = PHYSICS.getRotationCorrection(pitch, PHYSICS.currentPitchDeg)
-    local rvel = PHYSICS.getRotationCorrection(roll, PHYSICS.currentRollDeg)
+    local pvel = SHIP.pidRotate('headingpitch', pitch, PHYSICS.currentPitchDeg)
+    local rvel = SHIP.pidRotate('headingroll', roll, PHYSICS.currentRollDeg)
     local yvel = targetYaw
     SHIP.spin(pvel, rvel, yvel)
 end
