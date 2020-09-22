@@ -1,0 +1,2 @@
+checkElements()
+system.print("Tick")

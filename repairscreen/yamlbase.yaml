@@ -1,0 +1,7 @@
+---
+name: Repair Screen
+slots:
+  core:
+    class: CoreUnit
+  screen:
+    class: ScreenUnit
