@@ -39,9 +39,9 @@ function HUDAutopilot.addData(data, name, val)
 end
 
 HUDAutopilot.style = [[<style>
-    table.ap { display: block; position: fixed; width: 9vw; font-size: 150%; }
-    table.ap th { width: 3vw; height: 1vh; text-align: right; }
-    table.ap td { width: 5vw; height: 1vh; text-align: left; }
+    table.ap { display: block; position: fixed; font-size: 120%; }
+    table.ap td { width: 4vw; height: 1vh; text-align: left; }
+    table.ap th { width: 6vw; height: 1vh; text-align: right; }
 </style>]]
 
 function HUDAutopilot.render()
@@ -51,9 +51,9 @@ function HUDAutopilot.render()
         local dpos = vec3(MainScreen.destination.position)
 	local sbody = DU.getNearestBody(PHYSICS.position)
 	local dbody = DU.getNearestBody(dpos)
-	HUDAutopilot.addData(data, "Body", sbody.name)
+	HUDAutopilot.addData(data, "Location", sbody.name)
 	if sbody.name ~= dbody.name then
-	    HUDAutopilot.addData(data, "Target Body", sbody.name)
+	    HUDAutopilot.addData(data, "Target Body", dbody.name)
 	end
     end
     if not PHYSICS.inAtmo then

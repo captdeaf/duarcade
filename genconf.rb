@@ -3,7 +3,7 @@
 require 'yaml'
 
 # Only minify the _start
-MINIFY = true
+MINIFY = false
 MINIFY_ALL = false
 
 dirname = ARGV.shift
