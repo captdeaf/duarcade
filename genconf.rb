@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 #
 require 'yaml'
+require 'json'
 
 # Only minify the _start
 MINIFY = false
@@ -35,8 +36,33 @@ EOT
 
 conf = YAML.load(IO.read("#{dirname}/yamlbase.yaml"))
 
+$jsconf = {}
+$jsslots = {}
+
+$jsslotkeys = {}
+
+def jsaddslot(num, name)
+    $jsslots["#{num}"] = { "name" => name, "type" => { "events" => [], "methods" => []}}
+    $jsslotkeys[name] = num
+end
+
+jsaddslot(-3, 'library')
+jsaddslot(-2, 'system')
+jsaddslot(-1, 'unit')
+
+i = 0
+conf['slots'].each do |k, v|
+  jsaddslot(i, k)
+  i = i + 1
+end
+
 handlers = {}
 conf["handlers"] = handlers
+
+jshandlers = []
+
+SIGNATURES = {}
+SIGNATURES['tick'] = 'tick(timerId)'
 
 counter = 1
 Dir["#{dirname}/events/*.lua"].each do |eventfile|
@@ -44,20 +70,40 @@ Dir["#{dirname}/events/*.lua"].each do |eventfile|
   evt["lua"] = IO.read(eventfile).gsub(/^\s+|\s+$/,'')
   slotname = ""
   evtname = ""
+  argname = ""
+  jsfilt = {}
   if eventfile =~ /(\w+)\.(\w+)\.(\w+)\.lua$/ then
     evtname = $3
     slotname = $1
-    evt["args"] = "_DELME_1__[#{$2}]_DELME_1__"
+    argname = $2
+    evt["args"] = "_DELME_1__[#{argname}]_DELME_1__"
+    jsfilt["args"] = [{"value" => argname}]
   elsif eventfile =~ /(\w+)\.(\w+)\.lua$/ then
     evtname = $2
     slotname = $1
   end
   if slotname then
-    evtname = evtname + "_DELME_#{counter}__"
-    counter = counter + 1
+    evtname = evtname
     handlers[slotname] ||= {}
-    handlers[slotname][evtname] = evt
+    handlers[slotname][evtname + "_DELME_#{counter}__"] = evt
+    counter = counter + 1
   end
+
+  jsfilt['slotKey'] = "#{$jsslotkeys[slotname]}"
+  puts "Checking sigs for #{evtname}"
+  if SIGNATURES.key?(evtname) then
+      jsfilt['signature'] = SIGNATURES[evtname]
+  elsif jsfilt['args'] then
+      jsfilt['signature'] = "#{evtname}(#{argname})"
+  else
+      jsfilt['signature'] = "#{evtname}()"
+  end
+  jsfilt['args'] ||= []
+  jshandler = {}
+  jshandler['code'] = evt['lua']
+  jshandler['filter'] = jsfilt
+
+  jshandlers << jshandler
 end
 
 startevt = {}
@@ -77,7 +123,6 @@ startevt["lua"] = body
 handlers["system"] ||= {}
 handlers["system"]["start"] = startevt
 
-puts "Minifying"
 def minify(script)
   # Now minify everything
       IO.popen(['luamin', '-c'], mode='r+') do |lm|
@@ -89,6 +134,7 @@ end
 
 if MINIFY then
   if MINIFY_ALL then
+    puts "Minifying All, this may take some time"
     handlers.each do |k,slot|
       slot.each do |k,evt|
 	puts "Minifying #{evt['name']}"
@@ -96,10 +142,35 @@ if MINIFY then
       end
     end
   else
+    puts "Minifying system.start"
     startevt['lua'] = minify(startevt['lua'])
   end
 end
 
+jshandlers << {
+  'code' => startevt['lua'],
+  'filter' => {
+    'slotKey' => '-2',
+    'signature' => 'start()',
+    'args' => [],
+  }
+}
+
 File.open("#{dirname}.conf", "w") do |fout|
   fout.puts YAML.dump(conf).gsub(/.DELME_\d+_./,'')
+end
+
+jshandlers.each_with_index do |jsh, idx|
+  jsh['key'] = "#{idx}"
+end
+
+
+File.open("#{dirname}.yaml", "w") do |fout|
+  jsconf = {
+    'slots' => $jsslots,
+    'handlers' => jshandlers,
+    'methods' => [],
+    'events' => [],
+  }
+  fout.puts YAML.dump(jsconf).gsub(/.DELME_\d+_./,'')
 end
