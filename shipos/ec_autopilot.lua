@@ -27,6 +27,7 @@ EC_AUTOPILOT.start = function()
     EC_AUTOPILOT.arrived = false
     EC_AUTOPILOT.announcements = {}
     EC_AUTOPILOT.recalculate()
+    EC_AUTOPILOT.log = {}
 end
 
 EC_AUTOPILOT.announce = function(msg)
@@ -38,6 +39,7 @@ end
 EC_AUTOPILOT.resume = EC_AUTOPILOT.start
 
 EC_AUTOPILOT.stop = function()
+    EC_AUTOPILOT.log = {}
 end
 
 -- This is called twice a second
@@ -94,9 +96,16 @@ EC_AUTOPILOT.recalculate = function()
 	local desiredThrottle = 0.0
 
         if EC_AUTOPILOT.arrived and PHYSICS.currentSpeed < 1.0 then
-	    table.insert(cbs, {clearEngineCommand})
-	    table.insert(cbs, {clearDestination})
-	    table.insert(cbs, {setEngineCommand, EC_LAND})
+	    if altDiff < 15.0 then
+		table.insert(cbs, {clearEngineCommand})
+		table.insert(cbs, {clearDestination})
+		table.insert(cbs, {setEngineCommand, EC_LAND})
+	    else
+	        -- Unbrake so we fall down. 
+		table.insert(cbs, {SHIP.stabilize})
+		table.insert(cbs, {SHIP.brake, 0.0})
+		table.insert(cbs, {SHIP.hover, 10})
+	    end
         elseif EC_AUTOPILOT.arrived or flatdist < 30.0 then
 	    EC_AUTOPILOT.arrived = true
 	    table.insert(cbs, {SHIP.stabilize})
@@ -179,26 +188,43 @@ EC_AUTOPILOT.recalculate = function()
 	table.insert(cbs, {SHIP.brake, 0.0})
     else
         -- TODO: Raycast and determine if any of the bodies are in the way
-	-- TODO: Correct vector instead of just accel towards point
         local stopIn = dist
+	local desiredBrake = 0.0
         if saltitude < stopIn then stopIn = saltitude end
 	stopIn = stopIn - 10000 -- Atmosphere
 	EC_AUTOPILOT.announce("Performing space approach")
 	local brakedist = PHYSICS.brakeDistance * 1.5 -- Padding for Gravity until I can account for it
-	table.insert(cbs, {SHIP.turnToSpaceVector, vdirection})
 	if (PHYSICS.currentSpeed > 270.0 and stopIn <= brakedist) or
 	   (SHIP.plan.brake == 1.0 and stopIn < (brakedist * 1.2)) then
 	    -- 277 m/s is just under 1000 km/h, which is the damage point for
 	    -- entering atmosphere.
+	    desiredBrake = 1.0
 	    table.insert(cbs, {SHIP.brake, 1.0})
 	    table.insert(cbs, {SHIP.throttleTo, 0.0})
 	elseif brakedist < (stopIn * 0.75) then
 	    table.insert(cbs, {SHIP.brake, 0.0})
 	    table.insert(cbs, {SHIP.throttleTo, 1.0})
 	else
-	    table.insert(cbs, {SHIP.brake, 0.0})
 	    table.insert(cbs, {SHIP.throttleTo, 0.0})
 	end
+	-- Attempt to correct for drift
+
+	local vfix = vdirection - PHYSICS.constructVelocityDir
+	local vgo = (vdirection + vfix):normalize()
+
+        local vfl = vfix:len()
+
+	if vfix:len() > 1.0 then
+	    -- Massive course correction required
+	    desiredBrake = 1.0
+	elseif vfix:len() > 0.25 then
+	    vgo = vfix
+	elseif vfix:len() > 0.05 then
+	    vgo = (vdirection * 2.0 + vfix):normalize()
+	end
+
+	table.insert(cbs, {SHIP.turnToSpaceVector, vgo})
+	table.insert(cbs, {SHIP.brake, desiredBrake})
     end
 
 end
