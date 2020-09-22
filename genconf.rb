@@ -2,6 +2,10 @@
 #
 require 'yaml'
 
+# Only minify the _start
+MINIFY = true
+MINIFY_ALL = false
+
 dirname = ARGV.shift
 if not dirname then
   puts <<EOT
@@ -61,7 +65,7 @@ body = ""
 IO.readlines("#{dirname}/loadorder").each do |fn|
   fn.chomp!
   if fn =~ /^\w+.lua$/ then
-    body += IO.read("#{dirname}/" + fn)
+    body += IO.read("#{dirname}/" + fn).gsub(/^\s+/,'')
   end
 end
 File.open("#{dirname}_start.lua", 'w') do |fout|
@@ -72,6 +76,29 @@ startevt["lua"] = body
 
 handlers["system"] ||= {}
 handlers["system"]["start"] = startevt
+
+puts "Minifying"
+def minify(script)
+  # Now minify everything
+      IO.popen(['luamin', '-c'], mode='r+') do |lm|
+	lm.puts script
+	lm.close_write
+	return lm.gets(nil)
+      end
+end
+
+if MINIFY then
+  if MINIFY_ALL then
+    handlers.each do |k,slot|
+      slot.each do |k,evt|
+	puts "Minifying #{evt['name']}"
+	evt['lua'] = minify(evt['lua'])
+      end
+    end
+  else
+    startevt['lua'] = minify(startevt['lua'])
+  end
+end
 
 File.open("#{dirname}.conf", "w") do |fout|
   fout.puts YAML.dump(conf).gsub(/.DELME_\d+_./,'')
