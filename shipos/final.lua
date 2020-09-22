@@ -4,4 +4,6 @@ function initialize()
     HUDConfig.start()
     MainScreen.start()
     AutoPilotScreen.reset()
+    local body = DU.getNearestBody(PHYSICS.position)
+    system.print("Nearest: " .. body.name)
 end

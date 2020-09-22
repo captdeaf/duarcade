@@ -25,6 +25,7 @@ function PHYSICS.update()
     PHYSICS.worldGravity = vec3(core.getWorldGravity())
     PHYSICS.worldVertical = vec3(core.getWorldVertical())
     PHYSICS.altitude = core.getAltitude()
+    PHYSICS.position = vec3(core.getConstructWorldPos())
 
     -- Construct orientation
     PHYSICS.constructUp = vec3(core.getConstructWorldOrientationUp())
@@ -34,6 +35,8 @@ function PHYSICS.update()
     PHYSICS.constructLocalUp = vec3(core.getConstructOrientationUp())
     PHYSICS.constructLocalForward = vec3(core.getConstructOrientationForward())
     PHYSICS.constructLocalRight = vec3(core.getConstructOrientationRight())
+
+    PHYSICS.constructMass = core.getConstructMass()
 
     -- Ship velocity relative to the world
     PHYSICS.constructVelocity = vec3(core.getWorldVelocity())
@@ -51,10 +54,15 @@ function PHYSICS.update()
     PHYSICS.currentYawDeg = getRoll(PHYSICS.worldVertical, PHYSICS.constructUp, PHYSICS.constructForward)
 
     PHYSICS.atmosphereDensity = unit.getAtmosphereDensity()
-end
+    PHYSICS.inAtmo = PHYSICS.worldVertical:len() > 0.01 and PHYSICS.atmosphereDensity > 0.0
 
-function PHYSICS.isInAtmosphere()
-    return PHYSICS.worldVertical:len() > 0.01 and PHYSICS.atmosphereDensity > 0.0
+    PHYSICS.brakeDistance, PHYSICS.brakeTime = Kinematic.computeDistanceAndTime(
+            PHYSICS.constructVelocitySpeed, -- current speed
+	    0, -- end speed
+	    PHYSICS.constructMass,
+	    0, -- Forward force for turn and  burn, we don't bother
+	    0, -- Warmup time for turn and burn
+	    PHYSICS.maxBrakeForce) -- TODO: Include gravity?
 end
 
 function PHYSICS.getRotationDiff(targetRotation, currentRotation)

@@ -4,6 +4,8 @@ local AP_CRUISE_ALTITUDE = 800 --export: How high above target altitude to cruis
 local AP_CLIMB_PITCH = 15 --export: In degrees, how high to aim the ship during initial, full power climb.
 local AP_CRUISE_PITCH = 6.0 --export: Pitch to cruise at. If you're bouncing up and down, adjust this.
 
+local AP_ESCAPE_PITCH = 15.0 --export: Pitch to climb out of atmosphere with.
+
 local EC_AUTOPILOT = {
     name = 'Autopilot',
     desc = [[
@@ -15,7 +17,7 @@ Engage autopilot. Destination: %s.
     override = false,
 
     callbacks = {},
-    announcements = {},
+    last_announcement = nil,
     time = 0.0,
     arrived = false,
 }
@@ -28,8 +30,8 @@ EC_AUTOPILOT.start = function()
 end
 
 EC_AUTOPILOT.announce = function(msg)
-    if EC_AUTOPILOT.announcements[msg] then return end
-    EC_AUTOPILOT.announcements[msg] = true
+    if EC_AUTOPILOT.last_announcement == msg then return end
+    EC_AUTOPILOT.last_announcement = msg
     system.print("ANNOUNCEMENT: " .. msg)
 end
 
@@ -61,9 +63,9 @@ EC_AUTOPILOT.recalculate = function()
     local dpos = vec3(destination.position)
     local mypos = vec3(core.getConstructWorldPos())
     local vdiff = dpos - mypos
+    local vdirection = vdiff:normalize()
     local dist = vdiff:len()
-    EC_AUTOPILOT.announce("Plotting route for " .. math.floor(dist / 1000) .. "km")
-    local inatmo = PHYSICS.isInAtmosphere()
+    local inatmo = PHYSICS.inAtmo
 
     local cbs = EC_AUTOPILOT.callbacks
 
@@ -72,10 +74,16 @@ EC_AUTOPILOT.recalculate = function()
     local yaw_heading = getRoll(vdiff, PHYSICS.constructUp, PHYSICS.constructRight)
     local altDiff = PHYSICS.altitude - destination.altitude
 
+    local mybody = DU.getNearestBody(PHYSICS.position)
+    local dbody = DU.getNearestBody(vec3(destination.position))
+    local samebody = mybody.id == dbody.id
+    local saltitude = DU.distanceFromSurface(PHYSICS.position, dbody)
+    local daltitude = DU.distanceFromSurface(vec3(destination.position), dbody)
+
     SHIP.retractLandingGears()
 
     -- I think there's no planets more than 1.5 SU wide, and there's no
-    if inatmo and dist < 400000.0 and destination.inatmo then
+    if saltitude < 10000 and daltitude < 10000 and samebody then
 
 	local flatdist = math.sqrt(dist*dist - altDiff*altDiff)
 
@@ -143,15 +151,62 @@ EC_AUTOPILOT.recalculate = function()
 	table.insert(cbs, {SHIP.hover, 30})
 	table.insert(cbs, {SHIP.throttleTo, desiredThrottle})
 	table.insert(cbs, {SHIP.brake, brakeTo})
+    elseif inatmo then
+        -- If we are here, we have to take off. Destination is either in space, or
+	-- on another body.
+	table.insert(cbs, {SHIP.throttleTo, 1.0})
+	table.insert(cbs, {SHIP.brake, 0.0})
+        if EC_AUTOPILOT.time < 40 then
+	    table.insert(cbs, {SHIP.turnToHeadingAtmo, AP_CLIMB_PITCH, yaw_heading})
+	    EC_AUTOPILOT.announce("Begin takeoff")
+	elseif PHYSICS.altitude < 3000 then
+	    -- TODO: Depend on body gravity+density+etc?
+	    SHIP.rotateTo(AP_CLIMB_PITCH, 0.0, nil)
+	    EC_AUTOPILOT.announce("Climb to escape")
+	else
+	    SHIP.rotateTo(AP_ESCAPE_PITCH, 0.0, nil)
+	    EC_AUTOPILOT.announce("Attempting to escape atmo")
+	end
+    elseif PHYSICS.altitude < 30000 and not samebody then
+	EC_AUTOPILOT.announce("Out of atmosphere, attempting to escape")
+        -- Continue to try escaping our planet.
+	if inatmo then
+	    table.insert(cbs, {SHIP.turnToHeadingAtmo, AP_CLIMB_PITCH, yaw_heading})
+	else
+	    table.insert(cbs, {SHIP.turnToSpaceVector, vdirection})
+	end
+	table.insert(cbs, {SHIP.throttleTo, 1.0})
+	table.insert(cbs, {SHIP.brake, 0.0})
     else
-        EC_AUTOPILOT.announce("Interplanetary travel TBD")
+        -- TODO: Raycast and determine if any of the bodies are in the way
+	-- TODO: Correct vector instead of just accel towards point
+        local stopIn = dist
+        if saltitude < stopIn then stopIn = saltitude end
+	stopIn = stopIn - 10000 -- Atmosphere
+	EC_AUTOPILOT.announce("Performing space approach")
+	local brakedist = PHYSICS.brakeDistance * 1.5 -- Padding for Gravity until I can account for it
+	table.insert(cbs, {SHIP.turnToSpaceVector, vdirection})
+	if (PHYSICS.currentSpeed > 270.0 and stopIn <= brakedist) or
+	   (SHIP.plan.brake == 1.0 and stopIn < (brakedist * 1.2)) then
+	    -- 277 m/s is just under 1000 km/h, which is the damage point for
+	    -- entering atmosphere.
+	    table.insert(cbs, {SHIP.brake, 1.0})
+	    table.insert(cbs, {SHIP.throttleTo, 0.0})
+	elseif brakedist < (stopIn * 0.75) then
+	    table.insert(cbs, {SHIP.brake, 0.0})
+	    table.insert(cbs, {SHIP.throttleTo, 1.0})
+	else
+	    table.insert(cbs, {SHIP.brake, 0.0})
+	    table.insert(cbs, {SHIP.throttleTo, 0.0})
+	end
     end
 
 end
 
 EC_AUTOPILOT.update = function(secs)
-    local now = EC_AUTOPILOT.time + (secs * 2)
-    if math.floor(EC_AUTOPILOT.time) ~= math.floor(now) then
+    local now = EC_AUTOPILOT.time + secs
+    -- To save processing time, we recalculate only twice a second.
+    if math.floor(EC_AUTOPILOT.time * 2) ~= math.floor(now * 2) then
         EC_AUTOPILOT.recalculate()
     end
     EC_AUTOPILOT.time = now

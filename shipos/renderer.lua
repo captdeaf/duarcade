@@ -45,3 +45,39 @@ function eldebug(arg)
     end
     return arg
 end
+
+local Render = {}
+
+Render.distance = function(meters)
+    meters = math.floor(meters)
+    if meters < 10000 then
+        return string.format("%dm", meters)
+    elseif meters < 250000 then
+        return string.format("%dkm", math.floor(meters / 1000))
+    else
+        return string.format("%dsu", math.floor(meters / 200000))
+    end
+end
+
+Render.time = function(secs)
+    local sign = ''
+    if secs < 0 then
+        sign = '-'
+    end
+    secs = math.abs(secs)
+    local days = math.floor(secs / 86400)
+    secs = secs % 86400
+    local hours = math.floor(secs / 3600)
+    secs = secs % 3600
+    local minutes = math.floor(secs / 60)
+    secs = math.floor(secs % 60)
+    if days > 0 then
+        return string.format("%s%dd %.2dh", sign, days, hours)
+    elseif hours > 0 then
+        return string.format("%s%dh %.2dm", sign, hours, minutes)
+    elseif minutes > 0 then
+        return string.format("%s%dm %.2ds", sign, minutes, secs)
+    else
+        return string.format("%s%ds", sign, secs)
+    end
+end

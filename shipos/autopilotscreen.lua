@@ -206,8 +206,8 @@ AutoPilotScreen.bookmark = function(name)
     local bm = {
         name = name,
         position = core.getConstructWorldPos(),
-        altitude = core.getAltitude(),
-        inatmo = PHYSICS.isInAtmosphere()
+        altitude = PHYSICS.altitude,
+        inatmo = PHYSICS.inAtmo,
     }
     AutoPilotScreen.addBookmark(bm)
 end

@@ -1,14 +1,18 @@
 - 'library' stuff
 renderer.lua
+kinematics.lua
 physicslib.lua
 shiplib.lua
+
+-- Dual Universe bodies/etc
+du_base.lua
+du_bodies.lua
 
 -- Engines
 commandselect.lua
 ec_land.lua
 ec_hover.lua
 ec_autopilot.lua
--- enginedefault.lua
 engine_ship.lua
 
 -- Auto Pilot
@@ -17,8 +21,10 @@ autopilotscreen.lua
 -- HUD options
 hudconfig.lua
 hud_default_widgets.lua
+hud_damage.lua
 hud_rezoix_ui.lua
 hud_fuelgauges.lua
+hud_autopilot.lua
 
 - Main screen, this loads after the other screens.
 mainscreen.lua

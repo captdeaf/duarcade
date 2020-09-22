@@ -23,7 +23,7 @@ SHIP.setVectorThrust = function(throttle, tags, kinematicdirection, thrustdirect
     if math.abs(throttle) > 0.01 then
         local maxThrust = core.getMaxKinematicsParametersAlongAxis(tags, {kinematicdirection:unpack()})
         local speedF, speedB, spaceF, spaceB = table.unpack(maxThrust)
-        if not PHYSICS.isInAtmosphere() then
+        if not PHYSICS.inAtmo then
             speedF, speedB = spaceF, spaceB
         end
         local speed = speedF
@@ -141,26 +141,50 @@ SHIP.retractLandingGears = function()
     unit.retractLandingGears()
 end
 
+SHIP.getCorrectionThrust = function(heading)
+    local rval = utils.sign(heading)
+    if math.abs(heading) > 90 then
+	return rval * 0.3
+    elseif math.abs(heading) > 15 then
+	return rval * 0.05
+    elseif math.abs(heading) > 5 then
+	return rval * 0.01
+    end
+    return 0
+end
+
+SHIP.turnToSpaceVector = function(vec)
+    local phead = getRoll(vec, PHYSICS.constructForward, PHYSICS.constructUp)
+    local yhead = -getRoll(vec, PHYSICS.constructUp, PHYSICS.constructRight)
+    local pvec = SHIP.getCorrectionThrust(phead)
+    local yvec = SHIP.getCorrectionThrust(yhead)
+    -- Roll doesn't matter
+    SHIP.spin(pvec, 0.0, yvec)
+end
+
 SHIP.turnToHeadingAtmo = function(pitch, heading)
-    local targetYaw = 0.0
+    local targetYaw = nil
     local roll = 0
     if math.abs(heading) > 90 then
-        targetYaw = 0.5
-        roll = 20
+	targetYaw = 0.5
+	roll = 20
     elseif math.abs(heading) > 15 then
-        targetYaw = 0.2
-        roll = 10
+	targetYaw = 0.2
+	roll = 10
     elseif math.abs(heading) > 5 then
-        targetYaw = math.abs(heading) / 100
-        roll = 5
+	targetYaw = math.abs(heading) / 100
+	roll = 5
     elseif math.abs(heading) > 0.01 then
-        targetYaw = math.abs(heading) / 100
-        roll = 0
+	targetYaw = math.abs(heading) / 100
+	roll = 0
+    else
+	targetYaw = 0.0
+	roll = 0.0
     end
     if heading > 0 then
-        targetYaw = -targetYaw
+	targetYaw = -targetYaw
     else
-        roll = -roll
+	roll = -roll
     end
     local pvel = PHYSICS.getRotationCorrection(pitch, PHYSICS.currentPitchDeg)
     local rvel = PHYSICS.getRotationCorrection(roll, PHYSICS.currentRollDeg)
