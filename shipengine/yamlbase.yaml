@@ -1,0 +1,26 @@
+---
+name: ShipLib Engine
+slots:
+  atmofueltank:
+    class: AtmoFuelContainer
+    select: all
+  spacefueltank:
+    class: SpaceFuelContainer
+    select: all
+  rocketfueltank:
+    class: RocketFuelContainer
+    select: all
+  antigrav:
+    class: AntiGravityGeneratorUnit
+  warpdrive:
+    class: WarpDriveUnit
+  core:
+    class: CoreUnit
+  gyro:
+      class: GyroUnit
+  weapon:
+      class: WeaponUnit
+      select: manual
+  radar:
+      class: RadarPVPUnit
+      select: manual
