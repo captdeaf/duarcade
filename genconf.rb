@@ -90,7 +90,6 @@ Dir["#{dirname}/events/*.lua"].each do |eventfile|
   end
 
   jsfilt['slotKey'] = "#{$jsslotkeys[slotname]}"
-  puts "Checking sigs for #{evtname}"
   if SIGNATURES.key?(evtname) then
       jsfilt['signature'] = SIGNATURES[evtname]
   elsif jsfilt['args'] then
